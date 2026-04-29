@@ -1,0 +1,270 @@
+========================================================
+  TODO — TP CodeIgniter 4 (4h) — Groupe de 2 personnes
+  Date : 29 avril 2026
+========================================================
+Légende : [P1] = ELia | [P2] = Jemima
+Tags    : [ROUTE] [CTRL] [MODEL] [VUE] [BDD]
+========================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 1 — PREPARATION & CONFIG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P1] [BDD] Créer le projet CI4 et configurer la base de données
+      -> composer create-project codeigniter4/appstarter tp_ci4
+      -> Configurer app/Config/Database.php
+      -> Créer la base MySQL : tp_notes
+
+[ ] [P2] [BDD] Créer les migrations & seeders (tables + données)
+      -> Table : etudiants (id, nom, prenom, option, niveau)
+      -> Table : matieres (id, nom, semestre, option, est_optionnelle)
+      -> Table : notes (id, etudiant_id, matiere_id, note, created_at)
+      -> Seeder : 5+ étudiants, matières S3/S4 par option
+      -> php spark migrate
+      -> php spark db:seed
+
+[ ] [P1] [ROUTE] Configurer les routes dans app/Config/Routes.php
+      -> GET  /                           -> AuthController::index
+      -> POST /login                      -> AuthController::login
+      -> GET  /logout                     -> AuthController::logout
+      -> GET  /etudiants                  -> EtudiantController::index
+      -> GET  /etudiants/(:num)           -> EtudiantController::show($id)
+      -> GET  /etudiants/(:num)/s3        -> EtudiantController::notesSemestre($id, 'S3')
+      -> GET  /etudiants/(:num)/s4        -> EtudiantController::notesSemestre($id, 'S4')
+      -> GET  /etudiants/(:num)/l2        -> EtudiantController::notesL2($id)
+      -> GET  /notes/ajouter              -> NoteController::create
+      -> POST /notes/ajouter              -> NoteController::store
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 2 — AUTHENTIFICATION (LOGIN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P1] [CTRL][VUE] Créer AuthController.php
+      Fichier : app/Controllers/AuthController.php
+      Méthodes :
+        - index()   -> affiche la vue login
+        - login()   -> vérifie POST + démarre session
+        - logout()  -> détruit la session -> redirect /
+      Note : pré-remplir le formulaire avec admin/password par défaut
+
+[ ] [P1] [VUE] Créer la vue login
+      Fichier : app/Views/auth/login.php
+      -> Formulaire POST vers /login
+      -> Champs email et password pré-remplis (valeurs par défaut)
+      -> Afficher un message d'erreur si mauvais identifiants
+      -> Appliquer le thème SCSS fourni
+
+[ ] [P1] [CTRL] Créer le filtre d'authentification (AuthFilter)
+      Fichier : app/Filters/AuthFilter.php
+      -> Implémenter FilterInterface
+      -> Vérifier la session -> sinon redirect /
+      -> Enregistrer dans app/Config/Filters.php
+      -> Appliquer sur les routes /etudiants/* et /notes/*
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 3 — LISTE ETUDIANTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P2] [MODEL] Créer EtudiantModel.php
+      Fichier : app/Models/EtudiantModel.php
+      -> extends Model
+      -> $table = 'etudiants'
+      Méthodes :
+        - getAllEtudiants()
+        - getEtudiantById($id)
+
+[ ] [P2] [CTRL][VUE] Créer EtudiantController — méthode index()
+      Fichier : app/Controllers/EtudiantController.php
+      -> index() -> charge tous les étudiants via model
+      -> Passe les données à la vue
+      -> Gérer les options (dev / bddres / web) et niveaux (S3 / S4 / L2)
+
+[ ] [P2] [VUE] Créer la vue liste étudiants
+      Fichier : app/Views/etudiants/index.php
+      -> Tableau HTML : nom, prénom, option, niveau
+      -> Chaque ligne = lien vers /etudiants/{id}
+      -> Liens S3, S4, L2 par étudiant
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 4 — AJOUT DE NOTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P2] [MODEL] Créer NoteModel.php
+      Fichier : app/Models/NoteModel.php
+      -> $table = 'notes'
+      Méthodes :
+        - getNotesEtudiant($id)
+        - getNotesBySemestre($id, $semestre)
+        - getMatieresByOption($option, $semestre)
+        - saveNote($data)
+        - getMaxNoteMatiere($etudiant_id, $matiere_id)  <- règle note max
+
+[ ] [P2] [CTRL][VUE] Créer NoteController — create() & store()
+      Fichier : app/Controllers/NoteController.php
+      -> create() -> affiche le formulaire avec liste étudiants + matières
+      -> store()  -> validation POST, insertion en BDD
+      Règle : on peut saisir plusieurs fois la même note
+               -> on garde toujours la note la plus haute
+
+[ ] [P2] [VUE] Créer la vue formulaire ajout note
+      Fichier : app/Views/notes/create.php
+      -> Sélecteur étudiant + matière + note (0-20)
+      -> Message de succès après ajout
+      -> Formulaire réinitialisé pour saisie suivante (multi-saisie possible)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 5 — AFFICHAGE DES NOTES PAR ETUDIANT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P1] [CTRL][VUE] EtudiantController — méthode show($id)
+      -> Récupère l'étudiant + toutes ses notes S3 & S4
+      -> Passe les données à la vue
+      -> Affiche les liens S3, S4, L2
+
+[ ] [P1] [CTRL][VUE] EtudiantController — méthode notesSemestre($id, $sem)
+      Deux appels : notesSemestre($id, 'S3') et notesSemestre($id, 'S4')
+      Règles de gestion :
+        - Matières normales      -> note maximale (si saisie plusieurs fois)
+        - Matières optionnelles  -> retenir l'option avec la meilleure note
+          (ex : dev vs bddres vs web -> garder la meilleure des 3)
+
+[ ] [P1] [CTRL][VUE] EtudiantController — méthode notesL2($id)
+      -> Charge notes S3 + S4
+      -> Applique règles de gestion dans chaque semestre
+      -> Calcule : Moyenne L2 = (moyenne_S3 + moyenne_S4) / 2
+      -> Affiche le tout dans une seule vue
+
+[ ] [P2] [VUE] Créer les vues notes semestre et vue L2
+      Fichier 1 : app/Views/etudiants/notes_semestre.php
+        -> Tableau matière / note retenue pour un semestre
+      Fichier 2 : app/Views/etudiants/notes_l2.php
+        -> Tableau S3 + Tableau S4
+        -> Encart final : moyenne L2 calculée
+        -> Mettre en évidence la note retenue (meilleure option)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 6 — DESIGN SCSS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P1] [VUE] Intégrer le fichier SCSS fourni
+      -> Compiler : sass scss/custom.scss public/css/custom.css
+      -> Lier dans app/Views/layouts/main.php
+      -> Vérifier le rendu sur : login, liste étudiants, formulaire notes
+
+[ ] [P2] [VUE] Créer le layout principal et les partials
+      Fichier : app/Views/layouts/main.php
+        -> Structure : header + nav + zone contenu + footer
+      Fichier : app/Views/partials/nav.php
+        -> Liens : Liste étudiants | Ajouter une note | Déconnexion
+      -> Appliquer à toutes les vues
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 7 — TESTS & FINALISATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] [P1] [CTRL][MODEL] Tester les règles de gestion
+      Cas à vérifier :
+        - Saisir 2 notes différentes pour la même matière
+          -> la plus haute doit être retenue
+        - Tester les 3 options en S4 (dev / bddres / web)
+          -> seule la meilleure option doit apparaître dans le calcul
+        - Vérifier le calcul de la moyenne L2
+        - Vérifier que le filtre AuthFilter bloque les routes protégées
+
+[ ] [P2] [CTRL][MODEL][VUE][ROUTE][BDD] Revue finale, nettoyage & démo
+      Parcours de test complet :
+        1. Login avec les valeurs par défaut (formulaire pré-rempli)
+        2. Accès à la liste des étudiants
+        3. Clic sur un étudiant -> affichage de ses notes
+        4. Lien S3 -> notes du semestre 3
+        5. Lien S4 -> notes du semestre 4 (avec options)
+        6. Lien L2 -> notes des 2 semestres + moyenne
+        7. Ajouter une note -> vérifier la règle de gestion
+        8. Déconnexion
+      -> Nettoyer les logs, var_dump, commentaires de debug
+      -> Préparer la démo
+
+
+========================================================
+  ARBORESCENCE DES FICHIERS A CREER
+========================================================
+
+app/
+├── Config/
+│   ├── Database.php           (modifier)
+│   ├── Filters.php            (modifier — ajouter AuthFilter)
+│   └── Routes.php             (modifier — toutes les routes)
+│
+├── Controllers/
+│   ├── AuthController.php     [P1]
+│   ├── EtudiantController.php [P1]
+│   └── NoteController.php     [P2]
+│
+├── Filters/
+│   └── AuthFilter.php         [P1]
+│
+├── Models/
+│   ├── EtudiantModel.php      [P2]
+│   └── NoteModel.php          [P2]
+│
+├── Database/
+│   ├── Migrations/
+│   │   ├── ..._create_etudiants_table.php  [P2]
+│   │   ├── ..._create_matieres_table.php   [P2]
+│   │   └── ..._create_notes_table.php      [P2]
+│   └── Seeds/
+│       ├── EtudiantSeeder.php              [P2]
+│       ├── MatiereSeeder.php               [P2]
+│       └── NoteSeeder.php                  [P2]
+│
+└── Views/
+    ├── layouts/
+    │   └── main.php           [P2]
+    ├── partials/
+    │   └── nav.php            [P2]
+    ├── auth/
+    │   └── login.php          [P1]
+    ├── etudiants/
+    │   ├── index.php          [P2]
+    │   ├── show.php           [P1]
+    │   ├── notes_semestre.php [P2]
+    │   └── notes_l2.php       [P2]
+    └── notes/
+        └── create.php         [P2]
+
+public/
+└── css/
+    └── custom.css             [P1] (compilé depuis SCSS)
+
+scss/
+└── custom.scss                (fourni — ne pas modifier)
+
+
+========================================================
+  REGLES DE GESTION (RAPPEL)
+========================================================
+
+1. Note maximale
+   Si une note est saisie plusieurs fois pour la même matière,
+   on conserve uniquement la note la plus élevée.
+
+2. Matières optionnelles (S4 uniquement)
+   Options disponibles : dev / bddres / web
+   -> On retient l'option ayant la meilleure note.
+   -> Les deux autres options sont ignorées dans le calcul.
+
+3. Moyenne L2
+   Moyenne L2 = (moyenne_S3 + moyenne_S4) / 2
+   Chaque moyenne semestrielle est calculée APRES application
+   des règles 1 et 2 ci-dessus.
+
+========================================================
+  FIN DU TODO
+========================================================
